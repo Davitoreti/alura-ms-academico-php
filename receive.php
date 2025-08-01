@@ -16,17 +16,21 @@ $queue = 'student_enrollment';
 $channel->exchange_declare('client_enrolled', 'fanout', durable: true, auto_delete: false);
 $channel->queue_declare($queue, auto_delete: false);
 $channel->queue_bind($queue, 'client_enrolled');
-$channel->basic_consume($queue, no_ack: true, callback: function (AMQPMessage $msg) {
-    $properties = json_decode($msg->body, true);
-    $student = R::dispense('students');
-    $student->name = $properties['name'];
-    $student->email = $properties['email'];
-    $student->password = password_hash('123456', PASSWORD_ARGON2ID);
-    R::store($student);
+$channel->basic_consume(
+    $queue,
+    no_ack: true,
+    callback: function (AMQPMessage $msg) {
+        $properties = json_decode($msg->body, true);
+        $student = R::dispense('students');
+        $student->name = $properties['name'];
+        $student->email = $properties['email'];
+        $student->password = password_hash('123456', PASSWORD_ARGON2ID);
+        R::store($student);
 
-    sendMailTo($student);
-    echo 'E-mail enviado' . PHP_EOL;
-});
+        sendMailTo($student);
+        echo 'E-mail enviado' . PHP_EOL;
+    }
+);
 
 while ($channel->is_open()) {
     $channel->wait();
